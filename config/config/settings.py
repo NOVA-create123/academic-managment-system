@@ -15,6 +15,7 @@ from datetime import timedelta
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
 import os
+import sys
 
 ALLOWED_HOSTS = ["*"]
 
@@ -40,10 +41,12 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Get SECRET_KEY from environment. In production (DEBUG=False) require it to be set.
 SECRET_KEY = config('SECRET_KEY', default=None)
-# Allow build step to skip collectstatic by setting DISABLE_COLLECTSTATIC=1 in the build environment.
+# Allow collectstatic during build: detect explicit DISABLE_COLLECTSTATIC env or when
+# the management command `collectstatic` is being run (buildpack runs it).
 disable_collectstatic = os.environ.get('DISABLE_COLLECTSTATIC') == '1'
+running_collectstatic = 'collectstatic' in sys.argv
 if not SECRET_KEY:
-    if DEBUG or disable_collectstatic:
+    if DEBUG or disable_collectstatic or running_collectstatic:
         SECRET_KEY = 'django-insecure-dev-placeholder'
     else:
         raise ImproperlyConfigured('The SECRET_KEY environment variable is not set.')
