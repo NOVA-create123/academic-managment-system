@@ -13,13 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 ALLOWED_HOSTS = ["*"]
-
-
-
-SECRET_KEY = config('SECRET_KEY')
 
 #configuration pour l'authentification jwt
 
@@ -37,10 +34,17 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-17m7!^aryg7hdry%i1+%=5b-5kd*auub!^=10srsb@6bsr-pc6'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
+
+# Get SECRET_KEY from environment. In production (DEBUG=False) require it to be set.
+SECRET_KEY = config('SECRET_KEY', default=None)
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-placeholder'
+    else:
+        raise ImproperlyConfigured('The SECRET_KEY environment variable is not set.')
 
 
 
