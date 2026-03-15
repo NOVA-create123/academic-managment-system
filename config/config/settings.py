@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
+from urllib.parse import urlparse
 import os
 import sys
 
@@ -110,16 +111,40 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER' : config('DB_USER'),
-        'PASSWORD' : config('DB_PASSWORD'),
-        'HOST' : config('DB_HOST'),
-        'PORT' : config('DB_PORT'),
+# DATABASE configuration: prefer a single DATABASE_URL (Supabase), fallback to DB_* vars.
+database_url = config('DATABASE_URL', default=None)
+if database_url:
+    u = urlparse(database_url)
+    # determine if we should require SSL: require in prod (DEBUG=False) and when host is not localhost
+    host = u.hostname or ''
+    require_ssl = (not DEBUG) and (host not in ('localhost', '127.0.0.1'))
+    options = {'sslmode': 'require'} if require_ssl else {}
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': u.path.lstrip('/'),
+            'USER': u.username,
+            'PASSWORD': u.password,
+            'HOST': host,
+            'PORT': u.port or '5432',
+            'OPTIONS': options,
+        }
     }
-}
+else:
+    host = config('DB_HOST', default='')
+    require_ssl = (not DEBUG) and (host not in ('localhost', '127.0.0.1', ''))
+    options = {'sslmode': 'require'} if require_ssl else {}
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default=''),
+            'USER': config('DB_USER', default=''),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': host,
+            'PORT': config('DB_PORT', default='5432'),
+            'OPTIONS': options,
+        }
+    }
 
 
 # Password validation
@@ -174,3 +199,4 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
