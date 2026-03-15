@@ -40,8 +40,10 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Get SECRET_KEY from environment. In production (DEBUG=False) require it to be set.
 SECRET_KEY = config('SECRET_KEY', default=None)
+# Allow build step to skip collectstatic by setting DISABLE_COLLECTSTATIC=1 in the build environment.
+disable_collectstatic = os.environ.get('DISABLE_COLLECTSTATIC') == '1'
 if not SECRET_KEY:
-    if DEBUG:
+    if DEBUG or disable_collectstatic:
         SECRET_KEY = 'django-insecure-dev-placeholder'
     else:
         raise ImproperlyConfigured('The SECRET_KEY environment variable is not set.')
